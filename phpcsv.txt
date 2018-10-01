@@ -1,0 +1,176 @@
+//welcome
+
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Welcome extends CI_Controller {
+
+	/**
+	 * Index Page for this controller.
+	 *
+	 * Maps to the following URL
+	 * 		http://example.com/index.php/welcome
+	 *	- or -
+	 * 		http://example.com/index.php/welcome/index
+	 *	- or -
+	 * Since this controller is set as the default controller in
+	 * config/routes.php, it's displayed at http://example.com/
+	 *
+	 * So any other public methods not prefixed with an underscore will
+	 * map to /index.php/welcome/<method_name>
+	 * @see https://codeigniter.com/user_guide/general/urls.html
+	 */
+	/*public function index()
+	{
+		$this->load->view('welcome_message');
+	}*/
+	
+	function index()
+	 {
+		   $this->load->library('csvreader');
+
+		   $filePath = './csv/input.csv';
+	  
+		   $data['csvData'] = $this->csvreader->parse_file($filePath);
+
+		   $this->load->view('csv_view', $data);
+	 }
+}
+
+
+
+
+
+///////////////////////////// csv_view
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+</head>
+<body>
+
+<table >
+    <tr>
+            <td>ID</td>
+            <td>cost</td>
+            <td>price</td>
+            <td>qty</td>
+			<td>Total Cost</td>
+			<td>Total Price</td>
+    </tr>
+	
+	<?php
+		$file = fopen('./csv/'.'output.csv', 'wb');
+		fputcsv($file, array('ID', 'Cost', 'price', 'qty', 'Total Cost', 'Total Price'));
+	?>
+ 
+	<?php foreach($csvData as $field){
+		$totalCost = $field['qty'] * $field['cost'];
+		$totalPrice = $field['qty'] * $field['price'];
+		$row = array($field['id'],$field['cost'],$field['price'],$field['qty'],$totalCost,$totalPrice);
+		fputcsv($file, $row);
+	?>
+		<tr>
+			<td><?php echo $field['id'] ?></td>
+		   <td><?php echo $field['cost'] ?></td>
+			<td><?php echo $field['price'] ?></td>
+			<td><?php echo $field['qty'] ?></td>
+			<td><?php echo $totalCost ?></td>
+			<td><?php echo $totalPrice ?></td>
+		</tr>
+	<?php }?>
+	
+	<?php 
+		
+	?>	
+ 
+</table>
+</body>
+</html>
+
+
+
+////////////////////////////// csvreader
+<?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+/**
+ * CSVReader Class
+ * 
+ * $Id: csvreader.php 54 2009-10-21 21:01:52Z Pierre-Jean $
+ * 
+ * Allows to retrieve a CSV file content as a two dimensional array.
+ * Optionally, the first text line may contains the column names to
+ * be used to retrieve fields values (default).
+ * 
+ * Let's consider the following CSV formatted data:
+ * 
+ *        "col1";"col2";"col3"
+ *         "11";"12";"13"
+ *         "21;"22;"2;3"
+ * 
+ * It's returned as follow by the parsing operation with first line
+ * used to name fields:
+ * 
+ *         Array(
+ *             [0] => Array(
+ *                     [col1] => 11,
+ *                     [col2] => 12,
+ *                     [col3] => 13
+ *             )
+ *             [1] => Array(
+ *                     [col1] => 21,
+ *                     [col2] => 22,
+ *                     [col3] => 2;3
+ *             )
+ *        )
+ * 
+ * @author        Pierre-Jean Turpeau
+ * @link        http://www.codeigniter.com/wiki/CSVReader
+ */
+class CSVReader {
+    
+    var $fields;            /** columns names retrieved after parsing */ 
+    var $separator = ';';    /** separator used to explode each line */
+    var $enclosure = '"';    /** enclosure used to decorate each field */
+    
+    var $max_row_size = 4096;    /** maximum row size to be used for decoding */
+    
+    /**
+     * Parse a file containing CSV formatted data.
+     *
+     * @access    public
+     * @param    string
+     * @param    boolean
+     * @return    array
+     */
+    function parse_file($p_Filepath, $p_NamedFields = true) {
+        $content = false;
+        $file = fopen($p_Filepath, 'r');
+        if($p_NamedFields) {
+            $this->fields = fgetcsv($file, $this->max_row_size, $this->separator, $this->enclosure);
+        }
+        while( ($row = fgetcsv($file, $this->max_row_size, $this->separator, $this->enclosure)) != false ) {            
+            if( $row[0] != null ) { // skip empty lines
+                if( !$content ) {
+                    $content = array();
+                }
+                if( $p_NamedFields ) {
+                    $items = array();
+                    
+                    // I prefer to fill the array with values of defined fields
+                    foreach( $this->fields as $id => $field ) {
+                        if( isset($row[$id]) ) {
+                            $items[$field] = $row[$id];    
+                        }
+                    }
+                    $content[] = $items;
+                } else {
+                    $content[] = $row;
+                }
+            }
+        }
+        fclose($file);
+        return $content;
+    }
+}
+?>
